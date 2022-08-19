@@ -13,12 +13,10 @@ namespace mct_can
         [DllExport("MctAdapter_Create")]
         public static void MctAdapter_Create()
         {
-            File.WriteAllText("C:\\Users\\waltor\\Desktop\\foo.txt", "MctAdapter_Create\n");
         }
         [DllExport("MctAdapter_Release")]
         public static void MctAdapter_Release()
         {
-            File.AppendAllText("C:\\Users\\waltor\\Desktop\\foo.txt", "MctAdapter_Release\n");
         }
         [DllExport("MctAdapter_Open")]
         public static bool MctAdapter_Open(string bitrate)
@@ -32,7 +30,6 @@ namespace mct_can
             }
             catch (Exception e)
             {
-                File.AppendAllText("C:\\Users\\waltor\\Desktop\\foo.txt", e.ToString() + "\n");
                 return false;
             }
             return true;
@@ -40,7 +37,6 @@ namespace mct_can
         [DllExport("MctAdapter_IsOpen")]
         public static bool MctAdapter_IsOpen()
         {
-            File.AppendAllText("C:\\Users\\waltor\\Desktop\\foo.txt", "MctAdapter_IsOpen\n");
             return _mClient.Connected;
         }
         [DllExport("MctAdapter_SendMessage")]
@@ -52,17 +48,14 @@ namespace mct_can
                 Buffer.BlockCopy(BitConverter.GetBytes(id), 0, buf, 0, 4);
                 Buffer.BlockCopy(BitConverter.GetBytes(length), 0, buf, 4, 1);
                 Buffer.BlockCopy(BitConverter.GetBytes(data), 0, buf, 8, 8);
-                File.AppendAllText("C:\\Users\\waltor\\Desktop\\foo.txt", "Send(" + DateTime.Now.ToString() + "): " + BitConverter.ToString(buf) + "\n");
                 _mStream.Write(buf, 0, 16);
             }
             catch (SocketException se)
             {
-                File.AppendAllText("C:\\Users\\waltor\\Desktop\\foo.txt", se.ToString() + "\n");
                 return false;
             }
             catch (Exception e)
             {
-                File.AppendAllText("C:\\Users\\waltor\\Desktop\\foo.txt", e.ToString() + "\n");
                 return false;
             }
             return true;
@@ -72,7 +65,6 @@ namespace mct_can
         {
             byte[] buffer = new byte[16];
             _mStream.Read(buffer, 0, 16);
-            File.AppendAllText("C:\\Users\\waltor\\Desktop\\foo.txt", "Receive(" + DateTime.Now.ToString() + "): " + BitConverter.ToString(buffer) + "\n");
             id = BitConverter.ToUInt32(buffer,0);
             length = buffer[4];
             data = BitConverter.ToUInt64(buffer,8);
@@ -81,7 +73,6 @@ namespace mct_can
         [DllExport("MctAdapter_Close")]
         public static bool MctAdapter_Close()
         {
-            File.AppendAllText("C:\\Users\\waltor\\Desktop\\foo.txt", "MctAdapter_Close\n");
             // Release the socket.  
             _mClient = new TcpClient();
             _mStream = _mClient.GetStream();
