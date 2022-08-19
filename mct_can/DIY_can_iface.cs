@@ -8,7 +8,8 @@ namespace mct_can
 {
     public class DIY_can_iface
     {
-        private static Socket _mSocket;
+        private static TcpClient _mClient;
+        private static NetworkStream _mStream;
         [DllExport("MctAdapter_Create")]
         public static void MctAdapter_Create()
         {
@@ -25,32 +26,9 @@ namespace mct_can
             // Connect to a remote device.  
             try
             {
-                // Establish the remote endpoint for the socket.  
-                // This example uses port 11000 on the local computer.  
-                IPAddress[] ipAddress = Dns.GetHostAddresses("192.168.100.1");
-                IPEndPoint remoteEP = new IPEndPoint(ipAddress[0], 502);
-
-                // Create a TCP/IP  socket
-                _mSocket = new Socket(ipAddress[0].AddressFamily, SocketType.Stream, ProtocolType.Tcp );
-
-                // Connect the socket to the remote endpoint. Catch any errors.  
-                try
-                {
-                    _mSocket.Connect(remoteEP);
-
-                    File.AppendAllText("C:\\Users\\waltor\\Desktop\\foo.txt", _mSocket.RemoteEndPoint.ToString() + "\n" );
-                }
-                catch (SocketException se)
-                {
-                    File.AppendAllText("C:\\Users\\waltor\\Desktop\\foo.txt", se.ToString() + "\n");
-                    return false;
-                }
-                catch (Exception e)
-                {
-                    File.AppendAllText("C:\\Users\\waltor\\Desktop\\foo.txt", e.ToString() + "\n");
-                    return false;
-                }
-
+                _mClient = new TcpClient("192.168.100.1", 5555);
+                _mClient.NoDelay = true;
+                _mStream = _mClient.GetStream();
             }
             catch (Exception e)
             {
@@ -63,20 +41,19 @@ namespace mct_can
         public static bool MctAdapter_IsOpen()
         {
             File.AppendAllText("C:\\Users\\waltor\\Desktop\\foo.txt", "MctAdapter_IsOpen\n");
-            return _mSocket.Connected;
+            return _mClient.Connected;
         }
         [DllExport("MctAdapter_SendMessage")]
         public static bool MctAdapter_SendMessage(uint id, byte length, ulong data)
         {
-            File.AppendAllText("C:\\Users\\waltor\\Desktop\\foo.txt", "MctAdapter_SendMessage\n  id:" + id.ToString("X") + "\n  length:" + length + "\n  data:" + data.ToString("X") + "\n" )            try
+            try
             {
-                File.AppendAllText("C:\\Users\\waltor\\Desktop\\foo.txt", "MctAdapter_SendMessage:...\n");
                 byte[] buf = new byte[16];
                 Buffer.BlockCopy(BitConverter.GetBytes(id), 0, buf, 0, 4);
                 Buffer.BlockCopy(BitConverter.GetBytes(length), 0, buf, 4, 1);
                 Buffer.BlockCopy(BitConverter.GetBytes(data), 0, buf, 8, 8);
-                _mSocket.Send(buf);
-                File.AppendAllText("C:\\Users\\waltor\\Desktop\\foo.txt", "MctAdapter_SendMessage:Done\n");
+                File.AppendAllText("C:\\Users\\waltor\\Desktop\\foo.txt", "Send(" + DateTime.Now.ToString() + "): " + BitConverter.ToString(buf) + "\n");
+                _mStream.Write(buf, 0, 16);
             }
             catch (SocketException se)
             {
@@ -93,14 +70,12 @@ namespace mct_can
         [DllExport("MctAdapter_ReceiveMessage")]
         public static bool MctAdapter_ReceiveMessage(out uint id, out byte length, out ulong data)
         {
-            File.AppendAllText("C:\\Users\\waltor\\Desktop\\foo.txt", "MctAdapter_ReceiveMessage\n");
             byte[] buffer = new byte[16];
-            _mSocket.Receive(buffer);
-            File.AppendAllText("C:\\Users\\waltor\\Desktop\\foo.txt", BitConverter.ToString(buffer) + "\n");
+            _mStream.Read(buffer, 0, 16);
+            File.AppendAllText("C:\\Users\\waltor\\Desktop\\foo.txt", "Receive(" + DateTime.Now.ToString() + "): " + BitConverter.ToString(buffer) + "\n");
             id = BitConverter.ToUInt32(buffer,0);
             length = buffer[4];
             data = BitConverter.ToUInt64(buffer,8);
-            File.AppendAllText("C:\\Users\\waltor\\Desktop\\foo.txt", "MctAdapter_ReceiveMessage:Done\n");
             return true;
         }
         [DllExport("MctAdapter_Close")]
@@ -108,8 +83,8 @@ namespace mct_can
         {
             File.AppendAllText("C:\\Users\\waltor\\Desktop\\foo.txt", "MctAdapter_Close\n");
             // Release the socket.  
-            _mSocket.Shutdown(SocketShutdown.Both);
-            _mSocket.Close();
+            _mClient = new TcpClient();
+            _mStream = _mClient.GetStream();
             return true;
         }
     }
